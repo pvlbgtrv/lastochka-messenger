@@ -34,3 +34,20 @@ desktop.ini
 # Temporary
 *.tmp
 *.temp
+
+# Android build caches
+.gradle/
+.gradle-user-home/
+local.properties
+*.keystore
+
+# iOS build caches
+Pods/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xccheckout
+*.moved-aside
+
+# Go build
+*.test
+coverage.out

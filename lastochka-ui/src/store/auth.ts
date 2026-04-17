@@ -6,10 +6,9 @@ import {
   removeAuthToken,
   getAvatarUrl,
 } from '@/lib/tinode-client'
-import { useChatStore } from './chat'
+import { useChatStore } from './chatStore'
 import { cleanPhoneNumber, normalizeEmail } from '@/lib/phone-utils'
 import { 
-  sendEmailCode, 
   verifyEmailCode, 
   registerWithFullProfile,
   completeRegistration,
@@ -58,6 +57,7 @@ interface AuthState {
   verifyRegistrationEmail: (code: string) => Promise<void>
   
   logout: () => Promise<void>
+  deleteAccount: () => Promise<void>
   tryAutoLogin: () => Promise<void>
 }
 
@@ -69,8 +69,8 @@ function onLoginSuccess() {
 
   // Get display name via me topic meta callback
   const me = tn.getMeTopic()
-  me.onMetaDesc = (desc: { public?: { fn?: string; photo?: { type?: string; data?: string; ref?: string } } }) => {
-    const pub = desc?.public
+  me.onMetaDesc = (desc: unknown) => {
+    const pub = (desc as { public?: { fn?: string; photo?: { type?: string; data?: string; ref?: string } } } | undefined)?.public
     if (pub?.fn) {
       useAuthStore.setState({ displayName: pub.fn })
     }
@@ -214,6 +214,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: false, 
       userId: null, 
       displayName: null, 
+      error: null,
+      emailForVerification: null,
+      loginForVerification: null,
+      passwordForVerification: null,
+      verificationStep: 'none',
+    })
+  },
+
+  deleteAccount: async () => {
+    const tn = getTinode()
+    try {
+      const me = tn.getMeTopic()
+      await me.delTopic(true)
+    } catch {
+      // ignore and continue local cleanup
+    }
+
+    try {
+      useChatStore.getState().cleanup()
+      await tn.logout()
+    } catch {
+      // ignore
+    }
+
+    removeAuthToken()
+    set({
+      isAuthenticated: false,
+      userId: null,
+      displayName: null,
+      avatar: null,
+      isLoading: false,
       error: null,
       emailForVerification: null,
       loginForVerification: null,

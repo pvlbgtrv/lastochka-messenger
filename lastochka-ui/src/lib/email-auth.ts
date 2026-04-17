@@ -1,4 +1,28 @@
 import { getTinode } from './tinode-client'
+import { cleanPhoneNumber } from './phone-utils'
+
+function buildRegistrationTags(login: string, displayName: string): string[] {
+  const tags = new Set<string>()
+  const normalizedLogin = login.trim().toLowerCase()
+  const nameTokens = displayName
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+
+  // IMPORTANT:
+  // basic/email/tel are restricted tags on this Tinode deployment.
+  // Sending them in account create request causes 403:
+  // "attempt to directly assign restricted tags".
+  // Keep only non-restricted tags from profile name/login.
+  if (normalizedLogin) tags.add(`name:${normalizedLogin}`)
+  for (const token of nameTokens) {
+    tags.add(`fn:${token}`)
+    tags.add(`name:${token}`)
+  }
+  return Array.from(tags)
+}
 
 /**
  * Отправка email кода подтверждения
@@ -174,7 +198,7 @@ export async function updateProfile(params: {
             // params.avatar — Data URL: "data:image/jpeg;base64,/9j/..."
             // Tinode хранит {type: "image/jpeg", data: "<raw base64>"}
             const match = params.avatar!.match(/^data:([^;]+);base64,(.+)$/)
-            if (match) return { type: match[1], data: match[2] }
+            if (match) return { type: match[1] || 'image/jpeg', data: match[2] || '' }
             return { type: 'image/jpeg', data: params.avatar! }
           })() : undefined,
           note: params.bio,
@@ -215,7 +239,8 @@ export async function changePassword(
       },
     })
 
-    if (ctrl && (ctrl as { code?: number }).code >= 300) {
+    const ctrlCode = (ctrl as { code?: number } | undefined)?.code ?? 0
+    if (ctrlCode >= 300) {
       return {
         success: false,
         error: (ctrl as { text?: string }).text || 'Ошибка смены пароля'
@@ -248,10 +273,18 @@ export async function registerWithFullProfile(
 
     // Создаём учётную запись через createAccountBasic
     // email передаётся как credential для верификации
-    // телефон хранится как тег tel:79991234567
+    // search tags: basic/login, fn/name token(s), tel/phone, email
+    const tags = buildRegistrationTags(login, displayName)
+    const cleanedPhone = cleanPhoneNumber(phone)
+    const e164Phone = cleanedPhone ? `+${cleanedPhone}` : ''
+    const cred: Array<{ meth: string; val: string }> = [{ meth: 'email', val: email }]
+    if (e164Phone) {
+      cred.push({ meth: 'tel', val: e164Phone })
+    }
     const ctrl = await tn.createAccountBasic(login, password, {
       public: { fn: displayName },
-      cred: [{ meth: 'email', val: email }],
+      tags,
+      cred,
       login: true,
     })
 
