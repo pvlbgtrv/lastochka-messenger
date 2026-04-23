@@ -5,6 +5,7 @@ import ChatListScreen from '@/components/ChatListScreen'
 import ChatScreen from '@/components/ChatScreen'
 import SettingsScreen from '@/components/SettingsScreen'
 import SearchScreen from '@/components/SearchScreen'
+import BotsScreen from '@/components/BotsScreen'
 import FullscreenImageViewer from '@/components/FullscreenImageViewer'
 import { Bird } from 'lucide-react'
 import LoginScreen from '@/components/auth/LoginScreen'
@@ -36,15 +37,15 @@ export default function App() {
 
   const showSettings = view === 'settings' || view === 'profile'
   const showSearch = view === 'search'
+  const showBots = view === 'bots'
 
-  if (showSettings || showSearch) {
-    const standalone = showSearch ? <SearchScreen /> : <SettingsScreen />
-    const maxWidth = showSearch ? 'max-w-[560px]' : 'max-w-[480px]'
+  if (showSettings || showSearch || showBots) {
+    const standalone = showSearch ? <SearchScreen /> : showBots ? <BotsScreen /> : <SettingsScreen />
     return (
       <div className="h-full w-full overflow-hidden relative">
         {isDesktop ? (
-          <div className="h-full w-full max-w-[1600px] mx-auto p-3 md:p-4 lg:p-6 flex items-center justify-center">
-            <div className={`w-full ${maxWidth} h-full max-h-[900px] rounded-3xl overflow-hidden shadow-2xl shadow-black/10 dark:shadow-black/30 bg-white/50 dark:bg-[#0e1621]/60 border border-white/30 dark:border-white/10 backdrop-blur-sm`}>
+          <div className="h-full w-full max-w-[1600px] mx-auto p-3 md:p-4 lg:p-6">
+            <div className="h-full rounded-3xl overflow-hidden shadow-2xl shadow-black/10 dark:shadow-black/30 bg-white/50 dark:bg-[#0e1621]/60 border border-white/30 dark:border-white/10 backdrop-blur-sm">
               {standalone}
             </div>
           </div>

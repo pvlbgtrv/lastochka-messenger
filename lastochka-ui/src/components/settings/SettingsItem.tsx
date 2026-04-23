@@ -13,11 +13,11 @@ export function SettingsSection({ title, children }: SettingsSectionProps) {
   return (
     <div className="mb-6">
       {title && (
-        <h3 className="px-4 mb-2 text-[12px] font-semibold text-muted uppercase tracking-wider">
+        <h3 className="px-4 mb-2 text-[12px] font-semibold text-muted uppercase tracking-wider text-left">
           {title}
         </h3>
       )}
-      <div className="mx-4 glass dark:glass-dark rounded-2xl overflow-hidden">
+      <div className="mx-4 glass dark:glass-dark rounded-2xl overflow-hidden text-left">
         {children}
       </div>
     </div>
@@ -58,7 +58,7 @@ export function SettingsItem({
       </div>
 
       {/* Label + description */}
-      <div className="flex-1 min-w-0 ml-3">
+      <div className="flex-1 min-w-0 ml-3 text-left">
         <p className={clsx('text-[15px] font-medium truncate', danger ? 'text-red-500' : 'text-gray-900 dark:text-gray-100')}>
           {label}
         </p>
@@ -83,7 +83,7 @@ export function SettingsItem({
     return (
       <button
         onClick={onClick}
-        className="w-full flex items-center px-4 py-3.5 hover:bg-black/5 dark:hover:bg-white/5 active:bg-black/10 dark:active:bg-white/10 transition-colors"
+        className="w-full flex items-center text-left px-4 py-3.5 hover:bg-black/5 dark:hover:bg-white/5 active:bg-black/10 dark:active:bg-white/10 transition-colors"
       >
         {content}
       </button>
@@ -91,7 +91,7 @@ export function SettingsItem({
   }
 
   return (
-    <div className="flex items-center px-4 py-3.5">
+    <div className="flex items-center text-left px-4 py-3.5">
       {content}
     </div>
   )

@@ -1,8 +1,8 @@
 import { useState, type FormEvent, useEffect } from 'react'
 import { useAuthStore } from '@/store/auth'
-import { formatPhoneNumber, isValidPhoneNumber, isValidEmail } from '@/lib/phone-utils'
+import { cleanPhoneNumber, formatPhoneNumber, isValidPhoneNumber, isValidEmail, normalizeEmail } from '@/lib/phone-utils'
 import { Eye, EyeOff } from 'lucide-react'
-import { checkPhoneAvailability, checkLoginAvailability, checkEmailAvailability } from '@/lib/email-auth'
+import { checkAvailability, checkPhoneAvailability, checkLoginAvailability, checkEmailAvailability } from '@/lib/email-auth'
 
 interface RegisterFormProps {
   onSuccess?: () => void
@@ -167,13 +167,47 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       return
     }
 
+    // Hard server-side duplicate check on submit to avoid race conditions.
+    const normalizedLogin = login.trim().toLowerCase()
+    const normalizedEmail = normalizeEmail(email)
+    const normalizedPhone = cleanPhoneNumber(phone)
+
+    setIsCheckingLogin(true)
+    setIsCheckingEmail(true)
+    setIsCheckingPhone(true)
+    const availability = await checkAvailability(
+      {
+        login: normalizedLogin,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      },
+      // In production this endpoint may be unavailable/misrouted.
+      // Do not block registration on transport/proxy errors:
+      // server-side account creation will still enforce uniqueness.
+      { failOpen: true },
+    )
+    setIsCheckingLogin(false)
+    setIsCheckingEmail(false)
+    setIsCheckingPhone(false)
+
+    const loginDup = availability.loginAvailable === false
+    const emailDup = availability.emailAvailable === false
+    const phoneDup = availability.phoneAvailable === false
+
+    if (loginDup || emailDup || phoneDup) {
+      if (loginDup) setLoginError('Этот логин уже занят')
+      if (emailDup) setEmailError('Этот email уже зарегистрирован')
+      if (phoneDup) setPhoneError('Этот номер уже зарегистрирован')
+      return
+    }
+
     // Регистрация без верификации email
     await sendRegistrationEmail(
-      login,
+      normalizedLogin,
       password,
-      email,
-      phone,
-      displayName.trim() || login
+      normalizedEmail,
+      normalizedPhone,
+      displayName.trim() || normalizedLogin
     )
     
     // После успешной регистрации переходим на главную

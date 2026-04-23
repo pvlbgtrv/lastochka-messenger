@@ -101,12 +101,13 @@ export async function checkAvailability(params: {
   login?: string
   email?: string
   phone?: string
-}): Promise<{
+}, options?: { failOpen?: boolean }): Promise<{
   loginAvailable: boolean
   emailAvailable: boolean
   phoneAvailable: boolean
   error?: string
 }> {
+  const failOpen = options?.failOpen ?? true
   const url = '/v1/check-availability'
   
   try {
@@ -132,9 +133,9 @@ export async function checkAvailability(params: {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Ошибка проверки доступности'
     return {
-      loginAvailable: true,
-      emailAvailable: true,
-      phoneAvailable: true,
+      loginAvailable: failOpen,
+      emailAvailable: failOpen,
+      phoneAvailable: failOpen,
       error: msg,
     }
   }

@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import { format } from 'date-fns'
-import { ru } from 'date-fns/locale'
+import { isToday, isYesterday } from 'date-fns'
 import clsx from 'clsx'
-import { Users, BellOff, Pin, CheckCheck } from 'lucide-react'
+import { Users, BellOff, Pin, CheckCheck, Bot } from 'lucide-react'
 import type { Chat } from '@/types'
 
 interface ChatItemProps {
@@ -24,14 +24,13 @@ function ChatItem({ chat, isActive, onClick }: ChatItemProps) {
 
   const formatTime = (date?: Date) => {
     if (!date) return ''
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / 86400000)
-    if (days === 0) return format(date, 'HH:mm')
-    if (days === 1) return 'Вчера'
-    if (days < 7) return format(date, 'EEE', { locale: ru })
-    return format(date, 'dd.MM.yy')
+    if (isToday(date)) return format(date, 'HH:mm')
+    if (isYesterday(date)) return 'Вчера'
+    return format(date, 'dd.MM')
   }
+
+  const messagePreview = chat.typing ? 'печатает...' : (chat.lastMessage || '')
+  const timeLabel = formatTime(chat.lastMessageTs)
 
   return (
     <button
@@ -65,34 +64,50 @@ function ChatItem({ chat, isActive, onClick }: ChatItemProps) {
             <Users size={10} className="text-white" />
           </div>
         )}
+        {/* Bot icon */}
+        {(chat.botId || chat.isBot) && !chat.isGroup && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center border-2 border-white dark:border-surface-dark">
+            <Bot size={10} className="text-white" />
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-semibold text-[15px] text-gray-900 dark:text-gray-100 truncate">
-            {chat.name}
-          </h3>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {chat.pinned && <Pin size={14} className="text-muted/60" />}
-            {chat.lastMessageTs && (
-              <span className="text-[12px] text-muted tabular-nums">
-                {formatTime(chat.lastMessageTs)}
+          <div className="min-w-0 flex items-center gap-1.5">
+            <h3 className="font-semibold text-[15px] text-gray-900 dark:text-gray-100 truncate">
+              {chat.name}
+            </h3>
+            {(chat.botId || chat.isBot) && (
+              <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                Бот
               </span>
             )}
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {chat.pinned && <Pin size={14} className="text-muted/60" />}
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className="text-[14px] text-gray-500 dark:text-gray-400 truncate">
-            {chat.typing ? (
-              <span className="text-brand font-medium italic">печатает...</span>
-            ) : (
-              chat.lastMessage
+          <p
+            className={clsx(
+              'text-[14px] truncate min-w-0',
+              chat.typing
+                ? 'text-brand font-medium italic'
+                : 'text-gray-500 dark:text-gray-400',
             )}
+          >
+            {messagePreview}
           </p>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {timeLabel && (
+              <span className="text-[12px] text-muted tabular-nums">
+                {timeLabel}
+              </span>
+            )}
             {chat.muted && <BellOff size={14} className="text-muted/60" />}
             {chat.unread ? (
               <span
@@ -105,9 +120,9 @@ function ChatItem({ chat, isActive, onClick }: ChatItemProps) {
               >
                 {chat.unread}
               </span>
-            ) : chat.lastMessage && (
+            ) : messagePreview && (
               /* Read receipts for own messages */
-              chat.lastMessage.startsWith('Вы:') && (
+              messagePreview.startsWith('Вы:') && (
                 <CheckCheck size={16} className="text-brand" />
               )
             )}

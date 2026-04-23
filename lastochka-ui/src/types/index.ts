@@ -55,6 +55,8 @@ export interface Message {
 
 export interface Chat {
   id: string
+  botId?: string
+  isBot?: boolean
   name: string
   login?: string
   phone?: string

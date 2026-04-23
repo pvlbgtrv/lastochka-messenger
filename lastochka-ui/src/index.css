@@ -81,4 +81,23 @@
     -webkit-user-select: none;
     user-select: none;
   }
+
+  /* Rich text editor (contentEditable) */
+  .rich-editor strong, .rich-editor b { font-weight: 600; }
+  .rich-editor em, .rich-editor i { font-style: italic; }
+  .rich-editor del, .rich-editor s { text-decoration: line-through; }
+  .rich-editor code {
+    background: rgba(0,0,0,0.08);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+  }
+  .rich-editor a {
+    color: #6366f1;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .dark .rich-editor code { background: rgba(255,255,255,0.12); }
+  .dark .rich-editor a { color: #818cf8; }
 }

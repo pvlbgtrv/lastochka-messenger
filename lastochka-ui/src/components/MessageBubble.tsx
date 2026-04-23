@@ -1,11 +1,119 @@
-import { format } from 'date-fns'
+﻿import { format } from 'date-fns'
 import clsx from 'clsx'
-import { Check, CheckCheck } from 'lucide-react'
+import { Check, CheckCheck, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { Message, Reaction, ReactionType } from '@/types'
 import { useChatStore } from '@/store/chatStore'
 
-// ─── Message Bubble ──────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Markdown renderer в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+type Seg =
+  | { t: 'text'; v: string }
+  | { t: 'bold'; v: string }
+  | { t: 'italic'; v: string }
+  | { t: 'strike'; v: string }
+  | { t: 'code'; v: string }
+  | { t: 'link'; v: string; url: string }
+
+function normalizeLinkUrl(rawUrl: string): string {
+  const url = rawUrl.trim()
+  if (!url) return ''
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(url)) return url
+  return `https://${url}`
+}
+
+function parseMarkdown(input: string): Seg[] {
+  interface RawSpan { start: number; end: number; seg: Seg }
+  const raw: RawSpan[] = []
+
+  const add = (re: RegExp, build: (m: RegExpExecArray) => Seg) => {
+    for (const m of input.matchAll(re))
+      raw.push({ start: m.index!, end: m.index! + m[0].length, seg: build(m) })
+  }
+
+  add(/`([^`\n]+?)`/g,                                              (m) => ({ t: 'code',   v: m[1] }))
+  add(/\*\*([^*\n]+?)\*\*/g,                                        (m) => ({ t: 'bold',   v: m[1] }))
+  add(/__([^_\n]+?)__/g,                                            (m) => ({ t: 'bold',   v: m[1] }))
+  add(/(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)/g,                  (m) => ({ t: 'bold',   v: m[1] }))
+  add(/(?<!_)_(?!_)([^_\n]+?)(?<!_)_(?!_)/g,                       (m) => ({ t: 'italic', v: m[1] }))
+  add(/~~([^~\n]+?)~~/g,                                            (m) => ({ t: 'strike', v: m[1] }))
+  add(/\[([^\]\n]*?)\]\(([^)\n]+?)\)/g, (m) => ({ t: 'link', v: m[1] || m[2], url: m[2] }))
+
+  if (!raw.length) return [{ t: 'text', v: input }]
+
+  raw.sort((a, b) => a.start - b.start || b.end - a.end)
+  const spans: RawSpan[] = []
+  let cursor = 0
+  for (const s of raw) {
+    if (s.start >= cursor) { spans.push(s); cursor = s.end }
+  }
+
+  const segs: Seg[] = []
+  let pos = 0
+  for (const s of spans) {
+    if (s.start > pos) segs.push({ t: 'text', v: input.slice(pos, s.start) })
+    segs.push(s.seg)
+    pos = s.end
+  }
+  if (pos < input.length) segs.push({ t: 'text', v: input.slice(pos) })
+  return segs
+}
+
+function MarkdownText({
+  text,
+  className,
+  copiedCodeIndex,
+  onCopyCode,
+}: {
+  text: string
+  className?: string
+  copiedCodeIndex: number | null
+  onCopyCode: (code: string, index: number) => void
+}) {
+  const segs = parseMarkdown(text)
+  const hasFormatting = segs.some((s) => s.t !== 'text')
+
+  if (!hasFormatting) {
+    return <p className={className}>{text}</p>
+  }
+
+  return (
+    <div className={className}>
+      {segs.map((seg, i) => {
+        if (seg.t === 'text')   return seg.v
+        if (seg.t === 'bold')   return <strong key={i}>{seg.v}</strong>
+        if (seg.t === 'italic') return <em key={i}>{seg.v}</em>
+        if (seg.t === 'strike') return <del key={i}>{seg.v}</del>
+        if (seg.t === 'code') {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onCopyCode(seg.v, i)
+              }}
+              className="group relative my-1 block w-full rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/10 px-2.5 py-2 text-left"
+            >
+              <span className="absolute right-2 top-2 text-gray-500 dark:text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">
+                {copiedCodeIndex === i ? <Check size={13} /> : <Copy size={13} />}
+              </span>
+              <code className="block overflow-x-auto whitespace-pre-wrap break-all text-[13px] font-mono">{seg.v}</code>
+            </button>
+          )
+        }
+        if (seg.t === 'link') {
+          const href = normalizeLinkUrl(seg.url)
+          const label = seg.v || href
+          return <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="text-brand underline underline-offset-2 hover:opacity-80">{label}</a>
+        }
+        return null
+      })}
+    </div>
+  )
+}
+
+// в”Ђв”Ђв”Ђ Message Bubble в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 interface MessageBubbleProps {
   message: Message
@@ -26,6 +134,30 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const { setFullscreenImage, emojiStyle } = useChatStore()
   const [showReactionPicker, setShowReactionPicker] = useState(false)
+  const [copiedCodeIndex, setCopiedCodeIndex] = useState<number | null>(null)
+
+  const copyText = async (value: string) => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value)
+      return
+    }
+    const ta = document.createElement('textarea')
+    ta.value = value
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+  }
+
+  const handleCopyCode = (code: string, index: number) => {
+    void copyText(code).then(() => {
+      setCopiedCodeIndex(index)
+      window.setTimeout(() => setCopiedCodeIndex((current) => (current === index ? null : current)), 1200)
+    }).catch(() => {})
+  }
 
   // Quick reaction handlers
   const handleTouchStart = () => {
@@ -130,15 +262,18 @@ export default function MessageBubble({
 
         {/* Text */}
         {message.text && (
-          <p className="text-[14px] leading-relaxed text-gray-900 dark:text-gray-100 break-words whitespace-pre-wrap">
-            {message.text}
-          </p>
+          <MarkdownText
+            text={message.text}
+            className="text-[14px] leading-relaxed text-gray-900 dark:text-gray-100 break-words whitespace-pre-wrap"
+            copiedCodeIndex={copiedCodeIndex}
+            onCopyCode={handleCopyCode}
+          />
         )}
 
         {/* Time + Read status */}
         <div className={clsx('flex items-center gap-1 float-right ml-2.5 -mb-0.5 relative top-[2px]')}>
           {message.edited && (
-            <span className="text-[10px] text-gray-400/80 dark:text-gray-500/80 mr-0.5 font-medium">ред.</span>
+            <span className="text-[10px] text-gray-400/80 dark:text-gray-500/80 mr-0.5 font-medium">СЂРµРґ.</span>
           )}
           <span className="text-[11px] text-gray-400/80 dark:text-gray-500/80 tabular-nums">
             {format(message.ts, 'HH:mm')}
@@ -157,7 +292,7 @@ export default function MessageBubble({
   )
 }
 
-// ─── Reactions Bar ───────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Reactions Bar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 interface ReactionsBarProps {
   reactions: Reaction[]

@@ -15,7 +15,7 @@ export default function ChatListScreen({ isDesktop = false }: ChatListScreenProp
     setSearchQuery,
     setActiveChat,
     openSearch,
-    openSettings,
+    openProfile,
     openCreateGroupModal,
   } = useChatStore()
   const [searchFocused, setSearchFocused] = useState(false)
@@ -61,7 +61,7 @@ export default function ChatListScreen({ isDesktop = false }: ChatListScreenProp
             </span>
           </button>
           <button
-            onClick={openSettings}
+            onClick={openProfile}
             className="w-10 h-10 rounded-full bg-white/75 dark:bg-surface-variant-dark/65 flex items-center justify-center tap-target transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
           >
             <Settings size={20} className="text-gray-600 dark:text-gray-300" />

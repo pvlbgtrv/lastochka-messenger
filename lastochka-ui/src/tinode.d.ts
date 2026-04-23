@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_TINODE_API_KEY: string
   readonly VITE_TINODE_SECURE: string
   readonly VITE_APP_NAME: string
+  readonly VITE_BOT_GATEWAY_URL: string
 }
 
 interface ImportMeta {

@@ -267,7 +267,6 @@ def run(args, schema, secret):
                 stdoutln("\rMessage type not handled" + str(msg))
 
     except grpc.RpcError as err:
-        # print(err)
         printerr("gRPC failed with {0}: {1}".format(err.code(), err.details()))
         failed = True
     except Exception as ex:

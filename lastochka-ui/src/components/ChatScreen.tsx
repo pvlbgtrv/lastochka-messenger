@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useState } from 'react'
 import { useChatStore } from '@/store/chatStore'
-import { ArrowLeft, MoreVertical, Search, Users, X } from 'lucide-react'
+import { ArrowLeft, MoreVertical, Search, Trash2, Users, X } from 'lucide-react'
 import MessageBubble, { ReactionsBar } from './MessageBubble'
 import MessageInput from './MessageInput'
 import GroupSettingsModal from './GroupSettingsModal'
@@ -19,6 +19,7 @@ export default function ChatScreen({ isDesktop = false }: ChatScreenProps) {
     addReaction, 
     removeReaction, 
     openGroupSettingsModal,
+    deleteChat,
     startReply,
     startEdit,
     deleteMessage,
@@ -121,6 +122,17 @@ export default function ChatScreen({ isDesktop = false }: ChatScreenProps) {
           className="w-10 h-10 rounded-full flex items-center justify-center bg-white/70 dark:bg-surface-variant-dark/60 hover:bg-white dark:hover:bg-surface-dark transition-all duration-200 tap-target shadow-sm"
         >
           <Search size={20} className="text-gray-700 dark:text-gray-300" />
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm(`Удалить чат "${chat.name}"?`)) {
+              void deleteChat(chat.id)
+            }
+          }}
+          className="w-10 h-10 rounded-full flex items-center justify-center bg-white/70 dark:bg-surface-variant-dark/60 hover:bg-white dark:hover:bg-surface-dark transition-all duration-200 tap-target shadow-sm"
+          title="Удалить чат"
+        >
+          <Trash2 size={20} className="text-red-500" />
         </button>
         <button
           onClick={() => {

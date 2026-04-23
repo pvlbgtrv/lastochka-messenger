@@ -88,6 +88,77 @@ export function draftyToText(content: unknown): string {
   return '[вложение]'
 }
 
+type DraftyFmtSpan = { at?: number; len?: number; key?: number; tp?: string }
+type DraftyEntity = { tp?: string; data?: Record<string, unknown> }
+
+function applyWrapperByType(
+  rawText: string,
+  at: number,
+  len: number,
+  tp: string,
+  entityData?: Record<string, unknown>,
+): string {
+  if (at < 0 || len <= 0 || at + len > rawText.length) return rawText
+  const left = rawText.slice(0, at)
+  const mid = rawText.slice(at, at + len)
+  const right = rawText.slice(at + len)
+
+  switch (tp) {
+    case 'ST':
+      return `${left}**${mid}**${right}`
+    case 'EM':
+      return `${left}_${mid}_${right}`
+    case 'DL':
+      return `${left}~~${mid}~~${right}`
+    case 'CO':
+      return `${left}\`${mid}\`${right}`
+    case 'LN': {
+      const url = typeof entityData?.url === 'string'
+        ? entityData.url
+        : typeof entityData?.ref === 'string'
+          ? entityData.ref
+          : ''
+      if (!url) return rawText
+      return `${left}[${mid}](${url})${right}`
+    }
+    default:
+      return rawText
+  }
+}
+
+// Convert Drafty to markdown-like text preserving common inline formatting.
+export function draftyToMarkdown(content: unknown): string {
+  if (!content) return ''
+  if (typeof content === 'string') return content
+  if (typeof content !== 'object') return ''
+
+  const d = content as Record<string, unknown>
+  const txt = typeof d.txt === 'string' ? d.txt : draftyToText(content)
+  if (!txt) return ''
+
+  const fmt = Array.isArray(d.fmt) ? (d.fmt as DraftyFmtSpan[]) : []
+  if (!fmt.length) return txt
+  const ent = Array.isArray(d.ent) ? (d.ent as DraftyEntity[]) : []
+
+  const spans = fmt
+    .map((span) => {
+      const at = typeof span.at === 'number' ? span.at : -1
+      const len = typeof span.len === 'number' ? span.len : 0
+      const tp = typeof span.tp === 'string'
+        ? span.tp
+        : (typeof span.key === 'number' && ent[span.key]?.tp ? ent[span.key]!.tp! : '')
+      const entityData = typeof span.key === 'number' ? ent[span.key]?.data : undefined
+      return { at, len, tp, entityData }
+    })
+    .filter((span) => span.at >= 0 && span.len > 0 && !!span.tp)
+    .sort((a, b) => (b.at - a.at) || (b.len - a.len))
+
+  let out = txt
+  for (const span of spans) {
+    out = applyWrapperByType(out, span.at, span.len, span.tp, span.entityData)
+  }
+  return out
+}
 /**
  * Check if Drafty content contains an image (IM/EX entity with mime type image/*).
  * Handles both flat format { mime, ref, val } and nested { data: { mime, ref, val } }.
@@ -318,3 +389,4 @@ export function removeAuthToken() {
 }
 
 export type { MeTopic, Topic, TinodeContact, TinodeMessage }
+
